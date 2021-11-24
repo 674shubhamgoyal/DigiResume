@@ -1,95 +1,90 @@
-import { HttpClient } from "@angular/common/http";
-import { Component } from "@angular/core";
-import{FormControl, FormGroup,Validators,} from'@angular/forms'
-import { Router } from "@angular/router";
-import { alertService } from "../services/alert-service";
-import { ApiService } from "../services/api-service";
-import { HttpService } from "../services/httpService";
+import {Component, OnDestroy} from '@angular/core';
+import {AlertService} from '../services/alert-service';
+import {FormControl, FormGroup, Validators} from '@angular/forms';
+import {Router} from '@angular/router';
+import {AuthRepository} from '../repository/auth-repository';
+import {filter, takeWhile} from 'rxjs/operators';
+
 @Component({
-selector:'app-login',
-template:`
-<form id ="overlay"(ngSubmit)="this.loginform.valid && login()" [formGroup]="this.loginform" fxLayoutGap="30px" fxLayout="column" fxLayoutAlign="center center">
-
-    <mat-card fxLayout="column" fxLayoutAlign="center ">
-    <h1>Login</h1>
-       <mat-form-field>
-  
-            <input matInput formControlName="email"  placeholder="Email" type="email"/>            
-            <mat-error>Email is required
-            </mat-error>
+  selector: 'app-login',
+  template: `
+    <form class="overlay" fxLayoutAlign="center center"
+          fxLayout="column"
+          fxLayoutGap="40px" (ngSubmit)="this.loginForm.valid && login()" [formGroup]="this.loginForm">
+      <img width="20%" src="../assets/digiresume-green.png">
+      <mat-card fxLayout="column">
+        <h2>Login</h2>
+        <mat-form-field>
+          <input formControlName="email" type="email" matInput placeholder="Email"/>
+          <mat-error>Valid Email is Required</mat-error>
         </mat-form-field>
-
-       <mat-form-field>
-
-            <input matInput placeholder="Password" formControlName="password" type="password" />
-            <mat-error>Password(8-10 words) is required
-            </mat-error>
-       </mat-form-field> 
-       <a href="#" style="margin-top:20px;">forgot password?</a>
-       <div id="button"fxLayout="row" fxLayoutAlign="center center" fxLayoutGap="30px">
-        <mat-spinner *ngIf="this.loading" diameter="40"></mat-spinner> 
-       <button mat-raised-button color="primary" type=""submit>Login</button>
-          <button mat-raised-button color="accent"(click)="signup()">Signup</button>
-             
-       </div>
-    </mat-card>
-
-
-
-
-</form>`
-,
-styles:[`
-mat-card{
-    margin-top:100px;
-        size:auto;
-        background-color:#fff5e6;
+        <mat-form-field>
+          <input formControlName="password" type="password" matInput placeholder="Password"/>
+          <mat-error> (8-12 Digit) Password is Required</mat-error>
+        </mat-form-field>
+        <a style="margin-top: 2rem;" href="/forgot-password">Forgot Password?</a>
+        <div style="margin-top: 2rem" fxLayout="row" fxLayoutGap="20px" fxLayoutAlign="end">
+          <button type="submit" color="primary" mat-raised-button>Login</button>
+          <button (click)="signup()" type="button" color="accent" mat-raised-button>Signup</button>
+        </div>
+        <mat-spinner *ngIf="this.loading" color="accent" diameter="40"></mat-spinner>
+      </mat-card>
+    </form>
+  `,
+  styles: [`
+    .overlay {
+      width: 100%;
+      height: 100%;
     }
-h1{
-text-align:center;
 
-}
-#button{
-margin-left:200px;
+    mat-spinner {
+      align-self: center;
+      margin-top: 2rem;
+    }
 
-}
+    button {
+      color: white !important;
+    }
 
-
-
-
-`]
-         
-
+    mat-card {
+      height: 25rem;
+      width: 25rem;
+    }
+  `]
 })
-export class LoginComponent{
-loading = false;
-loginform:FormGroup
 
-constructor(private apiservice:ApiService,private alertservice : alertService,
-    private router : Router){
+export class LoginComponent implements OnDestroy {
+  loginForm: FormGroup;
+  loading = false;
+  isAlive = true;
 
-    this.loginform = new FormGroup({
-    email:new FormControl(null,[Validators.required]),
-    password :new FormControl(null,[Validators.required])
-
-
+  constructor(private authRepo: AuthRepository, private alterService: AlertService, private router: Router) {
+    this.loginForm = new FormGroup({
+      email: new FormControl(null, [Validators.required, Validators.email]),
+      password: new FormControl(null, [Validators.required, Validators.maxLength(12), Validators.minLength(8)]),
     });
-    
-}
-signup(){
-    this.router.navigate(['signup']);
-}
-    login(){
+  }
 
-        this.loading = true;
-        const request = this.apiservice.loginAndSetToken(this.loginform.value);
-        request.subscribe(data => {
-            this.loading = false;
-        },
-        (error)=>{
-            this.loading = false;
-            console.log(error);
-        }
-        )
-    }   
+  ngOnDestroy() {
+    this.isAlive = false;
+  }
+
+  login() {
+    this.loading = true;
+    const request$ = this.authRepo.login(this.loginForm.value);
+    request$.pipe(takeWhile(() => this.isAlive),
+      filter(res => !!res)).subscribe((data) => {
+      this.loading = false;
+      this.alterService.success('login Successful');
+      this.router.navigate(['verify'], {queryParams: {email: data.email}});
+    }, (error) => {
+      this.loading = false;
+    });
+  }
+
+  signup() {
+    this.router.navigate(['signup']);
+    // we are using this navigate to change our route
+
+  }
 }

@@ -1,120 +1,101 @@
-import { Component } from "@angular/core";
-import { FormGroup,Validators,FormControl } from "@angular/forms";
-import { Router } from "@angular/router";
-import { ApiService } from "../services/api-service";
+import {Component} from '@angular/core';
+import {FormControl, FormGroup, Validators} from '@angular/forms';
+import {ApiService} from '../services/api-service';
+import {AlertService} from '../services/alert-service';
+import {Router} from '@angular/router';
+import {AuthRepository} from '../repository/auth-repository';
 
 @Component({
-selector:'app-signup',
-template:`<form id ="overlay" (ngSubmit)="this.signupform.valid && signup()"[formGroup]="this.signupform" fxLayoutGap="30px" fxLayout="column" fxLayoutAlign="center center">
+  selector: 'app-signup',
+  template: `
+    <form (ngSubmit)="this.signupForm.valid && signup()"
+          [formGroup]="signupForm" class="overlay" fxLayoutAlign="center center"
+          fxLayout="column"
+          fxLayoutGap="40px">
+      <img width="20%" src="../assets/digiresume-green.png">
+      <mat-card fxLayout="column">
+        <h2>Signup Form</h2>
+        <mat-form-field>
+          <input formControlName="email" type="email" matInput placeholder="Email"/>
+          <mat-error>Valid Email is Required</mat-error>
+        </mat-form-field>
+        <mat-form-field>
+          <input formControlName="password" type="password" matInput placeholder="Password"/>
+          <mat-error> (8-12 Digit) Password is Required</mat-error>
+        </mat-form-field>
+        <mat-form-field>
+          <input formControlName="confirm_password" matInput placeholder="Confirm Password"/>
+          <mat-error>Confirm Password is Required</mat-error>
+        </mat-form-field>
+        <mat-form-field>
+          <input formControlName="name" matInput placeholder="Your Name"/>
+          <mat-error>Valid Name is Required</mat-error>
+        </mat-form-field>
+        <mat-form-field>
+          <input formControlName="job_category" matInput placeholder="Job category"/>
+          <mat-error>Valid Job Category is Required</mat-error>
+        </mat-form-field>
+        <mat-form-field>
+          <input formControlName="experience_level" type="email" matInput placeholder="Your Experience Level"/>
+          <mat-error>Valid Exp Level is Required</mat-error>
+        </mat-form-field>
+        <div style="margin-top: 2rem" fxLayout="row" fxLayoutGap="20px" fxLayoutAlign="end">
+          <button (click)="login()" type="button" color="primary" mat-raised-button>Go To Login</button>
+          <button type="submit" color="accent" mat-raised-button>Signup</button>
+        </div>
+        <mat-spinner *ngIf="this.loading" color="accent" diameter="40"></mat-spinner>
+      </mat-card>
+    </form>
+  `,
+  styles: [`
+    .overlay {
+      width: 100%;
+      height: 100%;
+    }
 
-<mat-card fxLayout="column" fxLayoutAlign="center ">
-<h1>Signup</h1>
-   <mat-form-field>
+    mat-spinner {
+      align-self: center;
+      margin-top: 2rem;
+    }
 
-        <input matInput formControlName="email"  placeholder="Email" type="email"/>            
-        <mat-error>Email is required
-        </mat-error>
-    </mat-form-field>
-   
+    button {
+      color: white !important;
+    }
 
-   <mat-form-field>
-
-        <input matInput placeholder="Password" formControlName="password" type="password" />
-        <mat-error>Password(8-10 words) is required
-        </mat-error>
-   </mat-form-field> 
-   <mat-form-field>
-   <input matInput formControlName="confirm_password"  placeholder="Confirm Password" type="text"/>            
-   <mat-error> Job Category  is required
-   </mat-error>
-</mat-form-field>
-<mat-form-field>
-<input matInput formControlName="name"  placeholder="Name" type="email"/>            
-<mat-error> Name is required
-</mat-error>
-</mat-form-field>
-   <mat-form-field>
-   <input matInput formControlName="job_category"  placeholder="Job Category" type="text"/>            
-   <mat-error> Name is required
-   </mat-error>
-</mat-form-field>
-<mat-form-field>
-<input matInput formControlName="experience_level"  placeholder="Experience level" type="text"/>            
-<mat-error> Experience level is required
-</mat-error>
-</mat-form-field>
-   <a href="#" style="margin-top:20px;">forgot password?</a>
- 
-   <div id="button"fxLayout="row" fxLayoutGap="30px">
-   <mat-spinner diameter="40" *ngIf="this.loading"></mat-spinner>   
-   <button mat-raised-button color="primary" (click)="login()">Back to login</button>
-      <button mat-raised-button color="accent" type="submit">Submit</button>
-         
-   </div>
-</mat-card>
-
-
-
-
-</form>`
-,
-styles:[
-   `
-   mat-card{
-   margin-top:50px;
-   size:auto;
-   background-color:#fff5e6;
-   
-}
-h1{
-text-align:center;
-
-}
-#button{
-margin-left:200px;
-
-}
-
-`]
-
-
-
+    mat-card {
+      height: 35rem;
+      width: 35rem;
+    }
+  `]
 })
-export class SignupComponent{
 
-signupform:FormGroup;
-loading = false;
-constructor(private router:Router ,private apiservice:ApiService){
+export class SignupComponent {
+  signupForm: FormGroup;
+  loading = false;
 
-    this.signupform = new FormGroup({
-    email:new FormControl(null,[Validators.required]),
-    password: new FormControl(null,[Validators.required]),
-    confirm_password: new FormControl(null,[Validators.required]),
-    name: new FormControl(null,[Validators.required]),
-    job_category :  new FormControl(null,[Validators.required]),
-    experience_level : new FormControl(null,[Validators.required]),
+  constructor(private authRepository: AuthRepository, private alterService: AlertService, private router: Router) {
+    this.signupForm = new FormGroup({
+      email: new FormControl(null, [Validators.required, Validators.email]),
+      password: new FormControl(null, [Validators.required, Validators.maxLength(12), Validators.minLength(8)]),
+      confirm_password: new FormControl(null, [Validators.required]),
+      name: new FormControl(null, [Validators.required]),
+      job_category: new FormControl(null, [Validators.required]),
+      experience_level: new FormControl(null, [Validators.required]),
+    });
+  }
 
-
-
-    })
-}
-login(){
-   this.router.navigate(['login']);
-}
-signup(){
-   this.loading = true;
-   this.apiservice.signup(this.signupform.value).subscribe(data=>{
-      console.log(data);
+  signup() {
+    this.loading = true;
+    this.authRepository.signup(this.signupForm.value).subscribe((data) => {
       this.loading = false;
-   },(error)=>{
+      this.alterService.success('signup Successful');
+      this.router.navigate(['']);
+    }, (error) => {
       this.loading = false;
-      console.log(error);
-   }
-   );
-   
+    });
+  }
 
-
-
-}
-
+  login() {
+    this.router.navigate(['']);
+  }
 }
